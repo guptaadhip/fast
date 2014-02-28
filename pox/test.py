@@ -2,6 +2,8 @@ from pox.core import core
 import pox.openflow.nicira as nx
 import pox.openflow.libopenflow_01 as of
 from pox.lib.addresses import IPAddr
+import pox.lib.packet as pkt
+from pox.lib.packet.ethernet import ethernet
 import time
 
 log = core.getLogger()
@@ -15,6 +17,7 @@ class Fast(object):
         # Initialize Nicira
         msg = nx.nx_flow_mod()
         event.connection.send(msg)
+        
         # Signal Table use 
         msg = nx.nx_flow_mod_table_id()
         event.connection.send(msg)
@@ -27,52 +30,55 @@ class Fast(object):
         event.connection.send(msg)
       
         #Table 0 rule: Selection of tables
-        #ARP Packet Handling
+        #IP Packet Handling
         msg = nx.nx_flow_mod()
-        #msg.match.eth_type = int(temp_match_type['dl_type'],5)
-        log.info("I got done")
-        #msg.match.dl_type = 0x0800
+        msg.match.eth_type = ethernet.IP_TYPE
         msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 1))
         event.connection.send(msg) 
         #ARP Packet Handling
         msg = nx.nx_flow_mod()
-        msg.table_id = 1
-        #msg.match = nx.match()
-        #msg.match.dl_type = 0x0806
+        msg.priority = 65001
+        msg.match.eth_type = pkt.ethernet.ARP_TYPE
         msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 2))
         event.connection.send(msg)
+        msg = nx.nx_flow_mod()
+        msg.match.eth_type = ethernet.IP_TYPE
+        msg.actions.append(of.ofp_action_output(port = of.OFPP_CONTROLLER))
+        event.connection.send(msg) 
+        #log.info("Table 0 done %d" % pkt.ipv4.ICMP_TYPE)
        
         #Table 1 Rules
-        '''msg = nx.nx_flow_mod()
-        msg.match = nx.match()
-        msg.table_id = 1
-        msg.match.nw_dst = IPAddr("10.0.0.1")
-        msg.match.dl_type = 0x0800
-        msg.actions.append(of.ofp_action_output(port = 1))
-        event.connection.send(msg)
-
         msg = nx.nx_flow_mod()
-        msg.match = nx.match()
         msg.table_id = 1
-        msg.match.nw_dst = IPAddr("10.0.0.2")
-        msg.match.dl_type = 0x0800
-        msg.actions.append(of.ofp_action_output(port = 2))
+        #msg.match.of_ip_dst_with_mask = ("0.0.0.1","0.0.0.255")
+        #msg.match.ip_dst = "10.0.0.1"
+        msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
+        #msg.actions.append(of.ofp_action_output(port = of.OFPP_CONTROLLER))
         event.connection.send(msg)
+        log.info("Table 1a done")
 
-        msg = nx.nx_flow_mod()
-        msg.match = nx.match()
-        msg.table_id = 1
-        msg.match.nw_dst = IPAddr("10.0.0.3")
-        msg.match.dl_type = 0x0800
-        msg.actions.append(of.ofp_action_output(port = 3))
-        event.connection.send(msg)'''
+        #msg = nx.nx_flow_mod()
+        #msg.table_id = 1
+        #msg.match.of_ip_dst_with_mask = ("0.0.0.2","0.0.0.255")
+        #msg.match.ip_dst = "10.0.0.2"
+        #msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
+        #event.connection.send(msg)
+        #log.info("Table 1b done")
+
+        #msg = nx.nx_flow_mod()
+        #msg.table_id = 1
+        #msg.match.of_ip_dst_with_mask = ("0.0.0.3","0.0.0.255")
+        #msg.match.ip_dst = "10.0.0.3"
+        #msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
+        #event.connection.send(msg)
+        #log.info("Table 1c done")
 
         #Table 2 Rules 
         msg = nx.nx_flow_mod()
         msg.table_id = 2
-        #msg.match.dl_type = 0x0806
         msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
         event.connection.send(msg)
+        log.info("Table 2 done")
         
         #Ping code 
         #msg = of.ofp_flow_mod()
@@ -97,10 +103,11 @@ class Fast(object):
         #msg2.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
         #event.connection.send(msg2)
         #log.info("Adhip: 3 flow sent")
+        log.info("Total")
 
     def _handle_PacketIn (self, event):
         packet = event.parsed
-        log.info("Packet came in %s")
+        log.info("Packet came in %s" % packet.type)
 
 
 
