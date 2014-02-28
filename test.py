@@ -11,7 +11,7 @@ class Fast(object):
 
     def _handle_ConnectionUp(self, event):
         log.info("Adhip: I am up");
-        log.info("Apoorv: Also here--from local branch");
+        log.info("Apoorv: Also here--from mininet local branch");
         #msg = nx.nx_packet_in_format()
         #event.connection.send(msg)
         #log.info("Adhip: I am up 1");
