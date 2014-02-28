@@ -11,6 +11,7 @@ class Fast(object):
 
     def _handle_ConnectionUp(self, event):
         log.info("Adhip: I am up");
+        log.info("Apoorv: Also here");
         #msg = nx.nx_packet_in_format()
         #event.connection.send(msg)
         #log.info("Adhip: I am up 1");
