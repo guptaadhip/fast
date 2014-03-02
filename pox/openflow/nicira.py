@@ -2049,6 +2049,11 @@ _make_nxm("NXM_NX_ND_SLL", 1, 24, 6, type=_nxm_ether)
 # IPv6 Neighbor Discovery target link-layer address
 _make_nxm("NXM_NX_ND_TLL", 1, 25, 6, type=_nxm_ether)
 
+
+_make_nxm("NXM_OF_TCP_FLAGS", 1, 34, 2)
+#_make_nxm_w("NXM_OF_TCP_FLAGS", 1, 34, 2)
+
+
 # Bits for NXM_NX_IP_FRAG
 NX_IP_FRAG_ANY = 1   # It's the first/only fragment
 NX_IP_FRAG_LATER = 3 # It's not the first fragment

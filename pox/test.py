@@ -5,14 +5,14 @@ from pox.lib.addresses import IPAddr
 import pox.lib.packet as pkt
 from pox.lib.packet.ethernet import ethernet
 from pox.lib.packet.ipv4 import ipv4
+from pox.lib.packet.tcp import tcp
 
 import time
 
 log = core.getLogger()
 
 class Fast(object):
-    PROTO_TYPE_IP    = 0x0800
-
+    
     def __init__ (self):
         core.openflow.addListeners(self)
 
@@ -46,29 +46,87 @@ class Fast(object):
         msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 4))
         event.connection.send(msg)
         log.info("Table 0 done")
-       
+      
         #Table 1 Rules
         msg = nx.nx_flow_mod()
         msg.table_id = 1
         msg.match.eth_type = pkt.ethernet.IP_TYPE
-        msg.match.ip_dst = "10.0.0.1"
-        msg.actions.append(of.ofp_action_output(port = 1))
+        msg.match.ip_proto = ipv4.TCP_PROTOCOL
+        msg.match.tcp_flags = 0x02
+        msg.priority = 65001
+        #msg.actions.append(of.ofp_action_output(port = of.OFPP_CONTROLLER))
+        msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 2))
         event.connection.send(msg)
-
         msg = nx.nx_flow_mod()
         msg.table_id = 1
         msg.match.eth_type = pkt.ethernet.IP_TYPE
-        msg.match.ip_dst = "10.0.0.2"
-        msg.actions.append(of.ofp_action_output(port = 2))
-        event.connection.send(msg)
-
-        msg = nx.nx_flow_mod()
-        msg.table_id = 1
-        msg.match.eth_type = pkt.ethernet.IP_TYPE
-        msg.match.ip_dst = "10.0.0.3"
-        msg.actions.append(of.ofp_action_output(port = 3))
+        msg.match.ip_proto = ipv4.TCP_PROTOCOL
+        msg.priority = 65000
+        msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
+        #msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
         event.connection.send(msg)
         log.info("Table 1 done")
+
+        #Table 2 Rules 
+        msg = nx.nx_flow_mod()
+        msg.table_id = 2
+        msg.match.eth_type = pkt.ethernet.IP_TYPE
+        msg.match.ip_proto = ipv4.TCP_PROTOCOL
+        msg.priority = 65000
+        msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
+        #msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
+        event.connection.send(msg)
+
+
+        #Table 2 Rules
+        # Set REG0 value to the output port, 0 for controller
+        #msg = nx.nx_flow_mod()
+        #msg.table_id = 2
+        #msg.match.eth_type = pkt.ethernet.IP_TYPE
+        #msg.match.ip_dst = "10.0.0.1"
+        #msg.priority = 65001
+        #msg.actions.append(nx.nx_reg_load(dst=nx.NXM_NX_REG0, value=int(2)))
+        #msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
+        #event.connection.send(msg)
+
+        #msg = nx.nx_flow_mod()
+        #msg.table_id = 2
+        #msg.match.eth_type = pkt.ethernet.IP_TYPE
+        #msg.match.ip_dst = "10.0.0.2"
+        #msg.priority = 65001
+        #msg.actions.append(nx.nx_reg_load(dst=nx.NXM_NX_REG0, value=int(2)))
+        #msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
+        #event.connection.send(msg)
+
+        #msg = nx.nx_flow_mod()
+        #msg.table_id = 2
+        #msg.match.eth_type = pkt.ethernet.IP_TYPE
+        #msg.match.ip_dst = "10.0.0.3"
+        #msg.priority = 65001
+        #msg.actions.append(nx.nx_reg_load(dst=nx.NXM_NX_REG0, value=int(3)))
+        #msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
+        #event.connection.send(msg)
+       
+        #send to controller 
+        #msg = nx.nx_flow_mod()
+        #msg.table_id = 2
+        #msg.priority = 65000
+        #msg.actions.append(nx.nx_reg_load(dst=nx.NXM_NX_REG0, value=int(0)))
+        #msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
+        #event.connection.send(msg)
+        #log.info("Table 2 done")
+        
+        #Table 3 Rules
+        #for x in range(0,4):
+        #    msg = nx.nx_flow_mod()
+        #    msg.table_id = 3
+        #    msg.match.NXM_NX_REG0 = x
+        #    if (x == 0):
+        #        msg.actions.append(of.ofp_action_output(port = of.OFPP_CONTROLLER))
+        #    else:
+        #        msg.actions.append(of.ofp_action_output(port = x))
+        #    event.connection.send(msg)
+        #log.info("Table 3 done")
 
         #Table 4 Rules 
         msg = nx.nx_flow_mod()
