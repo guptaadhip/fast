@@ -4,16 +4,19 @@ import pox.openflow.libopenflow_01 as of
 from pox.lib.addresses import IPAddr
 import pox.lib.packet as pkt
 from pox.lib.packet.ethernet import ethernet
+from pox.lib.packet.ipv4 import ipv4
+
 import time
 
 log = core.getLogger()
 
 class Fast(object):
+    PROTO_TYPE_IP    = 0x0800
+
     def __init__ (self):
         core.openflow.addListeners(self)
 
     def _handle_ConnectionUp(self, event):
-        log.info("Adhip: I am up");
         # Initialize Nicira
         msg = nx.nx_flow_mod()
         event.connection.send(msg)
@@ -22,63 +25,57 @@ class Fast(object):
         msg = nx.nx_flow_mod_table_id()
         event.connection.send(msg)
 
-        #Table 1 -> PING Table 2 -> ARP 
-        msg = nx.nx_flow_mod(command=of.OFPFC_DELETE, table_id = 1)
-        event.connection.send(msg)
+        #Table 1 -> TCP Table 2 -> ARP
+        for temp_table_id in range(1, 5):  
+            msg = nx.nx_flow_mod(command=of.OFPFC_DELETE, table_id = temp_table_id)
+            event.connection.send(msg)
     
-        msg = nx.nx_flow_mod(command=of.OFPFC_DELETE, table_id = 2)
-        event.connection.send(msg)
-      
         #Table 0 rule: Selection of tables
-        #IP Packet Handling
+        #IP Packet Handling / TCP
         msg = nx.nx_flow_mod()
-        msg.match.eth_type = ethernet.IP_TYPE
+        msg.match.eth_type = pkt.ethernet.IP_TYPE
+        msg.match.ip_proto = ipv4.TCP_PROTOCOL
+        msg.priority = 65000
         msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 1))
-        event.connection.send(msg) 
+        event.connection.send(msg)
+ 
         #ARP Packet Handling
         msg = nx.nx_flow_mod()
         msg.priority = 65001
         msg.match.eth_type = pkt.ethernet.ARP_TYPE
-        msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 2))
+        msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 4))
         event.connection.send(msg)
-        msg = nx.nx_flow_mod()
-        msg.match.eth_type = ethernet.IP_TYPE
-        msg.actions.append(of.ofp_action_output(port = of.OFPP_CONTROLLER))
-        event.connection.send(msg) 
-        #log.info("Table 0 done %d" % pkt.ipv4.ICMP_TYPE)
+        log.info("Table 0 done")
        
         #Table 1 Rules
         msg = nx.nx_flow_mod()
         msg.table_id = 1
-        #msg.match.of_ip_dst_with_mask = ("0.0.0.1","0.0.0.255")
-        #msg.match.ip_dst = "10.0.0.1"
-        msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
-        #msg.actions.append(of.ofp_action_output(port = of.OFPP_CONTROLLER))
+        msg.match.eth_type = pkt.ethernet.IP_TYPE
+        msg.match.ip_dst = "10.0.0.1"
+        msg.actions.append(of.ofp_action_output(port = 1))
         event.connection.send(msg)
-        log.info("Table 1a done")
 
-        #msg = nx.nx_flow_mod()
-        #msg.table_id = 1
-        #msg.match.of_ip_dst_with_mask = ("0.0.0.2","0.0.0.255")
-        #msg.match.ip_dst = "10.0.0.2"
-        #msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
-        #event.connection.send(msg)
-        #log.info("Table 1b done")
-
-        #msg = nx.nx_flow_mod()
-        #msg.table_id = 1
-        #msg.match.of_ip_dst_with_mask = ("0.0.0.3","0.0.0.255")
-        #msg.match.ip_dst = "10.0.0.3"
-        #msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
-        #event.connection.send(msg)
-        #log.info("Table 1c done")
-
-        #Table 2 Rules 
         msg = nx.nx_flow_mod()
-        msg.table_id = 2
+        msg.table_id = 1
+        msg.match.eth_type = pkt.ethernet.IP_TYPE
+        msg.match.ip_dst = "10.0.0.2"
+        msg.actions.append(of.ofp_action_output(port = 2))
+        event.connection.send(msg)
+
+        msg = nx.nx_flow_mod()
+        msg.table_id = 1
+        msg.match.eth_type = pkt.ethernet.IP_TYPE
+        msg.match.ip_dst = "10.0.0.3"
+        msg.actions.append(of.ofp_action_output(port = 3))
+        event.connection.send(msg)
+        log.info("Table 1 done")
+
+        #Table 4 Rules 
+        msg = nx.nx_flow_mod()
+        msg.table_id = 4
         msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
         event.connection.send(msg)
-        log.info("Table 2 done")
+        log.info("Table 4 done")
         
         #Ping code 
         #msg = of.ofp_flow_mod()
@@ -103,7 +100,6 @@ class Fast(object):
         #msg2.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
         #event.connection.send(msg2)
         #log.info("Adhip: 3 flow sent")
-        log.info("Total")
 
     def _handle_PacketIn (self, event):
         packet = event.parsed
