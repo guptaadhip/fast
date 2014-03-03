@@ -46,75 +46,114 @@ class Fast(object):
         msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 4))
         event.connection.send(msg)
         log.info("Table 0 done")
-      
-        #Table 1 Rules
-        msg = nx.nx_flow_mod()
-        msg.table_id = 1
-        msg.match.eth_type = pkt.ethernet.IP_TYPE
-        msg.match.ip_proto = ipv4.TCP_PROTOCOL
-        msg.match.tcp_flags = 0x02
-        msg.priority = 65001
-        #msg.actions.append(of.ofp_action_output(port = of.OFPP_CONTROLLER))
-        msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 2))
-        event.connection.send(msg)
+     
+        #Table 1 Rules 
+        # TBD: State Machine and Hash value
         msg = nx.nx_flow_mod()
         msg.table_id = 1
         msg.match.eth_type = pkt.ethernet.IP_TYPE
         msg.match.ip_proto = ipv4.TCP_PROTOCOL
         msg.priority = 65000
-        msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
-        #msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
+        msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 2))
         event.connection.send(msg)
-        log.info("Table 1 done")
+ 
+        #Table 2 Rules
 
-        #Table 2 Rules 
+        #Sync Ack
         msg = nx.nx_flow_mod()
         msg.table_id = 2
         msg.match.eth_type = pkt.ethernet.IP_TYPE
         msg.match.ip_proto = ipv4.TCP_PROTOCOL
-        msg.priority = 65000
-        msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
-        #msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
+        msg.match.tcp_flags = 0x12
+        msg.priority = 65002
+        msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
         event.connection.send(msg)
 
-
-        #Table 2 Rules
-        # Set REG0 value to the output port, 0 for controller
+        #Sync Only
         #msg = nx.nx_flow_mod()
         #msg.table_id = 2
         #msg.match.eth_type = pkt.ethernet.IP_TYPE
-        #msg.match.ip_dst = "10.0.0.1"
-        #msg.priority = 65001
+        #msg.match.ip_proto = ipv4.TCP_PROTOCOL
+        #msg.match.NXM_NX_REG0 = 0x1
+        #Was the SYN Set previously
+        #msg.priority = 65002
+        #msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
+        #event.connection.send(msg)
+
+        #Sync
+        msg = nx.nx_flow_mod()
+        msg.table_id = 2
+        msg.match.eth_type = pkt.ethernet.IP_TYPE
+        msg.match.ip_proto = ipv4.TCP_PROTOCOL
+        msg.match.tcp_flags = 2
+        msg.priority = 65001
+        # Signifying SYN FLAG was set
+        #msg.actions.append(nx.nx_reg_load(dst=nx.NXM_NX_REG0, value=int(1)))
+        msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
+        event.connection.send(msg)
+        
+        #Ack
+        msg = nx.nx_flow_mod()
+        msg.table_id = 2
+        msg.match.eth_type = pkt.ethernet.IP_TYPE
+        msg.match.ip_proto = ipv4.TCP_PROTOCOL
+        msg.match.tcp_flags = 0x010
+        msg.priority = 65003
+        msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
+        event.connection.send(msg)
+
+        #RST
+        msg = nx.nx_flow_mod()
+        msg.table_id = 2
+        msg.match.eth_type = pkt.ethernet.IP_TYPE
+        msg.match.ip_proto = ipv4.TCP_PROTOCOL
+        msg.match.tcp_flags = 0x1
+        msg.priority = 65003
+        msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
+        event.connection.send(msg)
+
+        #send to controller 
+        msg = nx.nx_flow_mod()
+        msg.table_id = 2
+        msg.priority = 64999
+        msg.actions.append(of.ofp_action_output(port = of.OFPP_CONTROLLER))
+        event.connection.send(msg)
+        log.info("Table 2 done")
+
         #msg.actions.append(nx.nx_reg_load(dst=nx.NXM_NX_REG0, value=int(2)))
-        #msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
-        #event.connection.send(msg)
 
-        #msg = nx.nx_flow_mod()
-        #msg.table_id = 2
-        #msg.match.eth_type = pkt.ethernet.IP_TYPE
-        #msg.match.ip_dst = "10.0.0.2"
-        #msg.priority = 65001
-        #msg.actions.append(nx.nx_reg_load(dst=nx.NXM_NX_REG0, value=int(2)))
-        #msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
-        #event.connection.send(msg)
+        #Table 3 Rules: Forward the packet to the Destination
+        msg = nx.nx_flow_mod()
+        msg.table_id = 3
+        msg.match.eth_type = pkt.ethernet.IP_TYPE
+        msg.match.ip_dst = "10.0.0.1"
+        msg.priority = 65001
+        msg.actions.append(of.ofp_action_output(port = 1))
+        event.connection.send(msg)
 
-        #msg = nx.nx_flow_mod()
-        #msg.table_id = 2
-        #msg.match.eth_type = pkt.ethernet.IP_TYPE
-        #msg.match.ip_dst = "10.0.0.3"
-        #msg.priority = 65001
-        #msg.actions.append(nx.nx_reg_load(dst=nx.NXM_NX_REG0, value=int(3)))
-        #msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
-        #event.connection.send(msg)
+        msg = nx.nx_flow_mod()
+        msg.table_id = 3
+        msg.match.eth_type = pkt.ethernet.IP_TYPE
+        msg.match.ip_dst = "10.0.0.2"
+        msg.priority = 65001
+        msg.actions.append(of.ofp_action_output(port = 2))
+        event.connection.send(msg)
+
+        msg = nx.nx_flow_mod()
+        msg.table_id = 3
+        msg.match.eth_type = pkt.ethernet.IP_TYPE
+        msg.match.ip_dst = "10.0.0.3"
+        msg.priority = 65001
+        msg.actions.append(of.ofp_action_output(port = 3))
+        event.connection.send(msg)
        
         #send to controller 
-        #msg = nx.nx_flow_mod()
-        #msg.table_id = 2
-        #msg.priority = 65000
-        #msg.actions.append(nx.nx_reg_load(dst=nx.NXM_NX_REG0, value=int(0)))
-        #msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
-        #event.connection.send(msg)
-        #log.info("Table 2 done")
+        msg = nx.nx_flow_mod()
+        msg.table_id = 3
+        msg.priority = 65000
+        msg.actions.append(of.ofp_action_output(port = of.OFPP_CONTROLLER))
+        event.connection.send(msg)
+        log.info("Table 3 done")
         
         #Table 3 Rules
         #for x in range(0,4):
@@ -162,6 +201,20 @@ class Fast(object):
     def _handle_PacketIn (self, event):
         packet = event.parsed
         log.info("Packet came in %s" % packet.type)
+        tcpp = event.parsed.find('tcp')
+        if tcpp and tcpp.SYN:
+            log.info("Packet SYN")
+        if tcpp and tcpp.ACK:
+            log.info("Packet ACK")
+        if tcpp and tcpp.PSH:
+            log.info("Packet PSH")
+        if tcpp and tcpp.RST:
+            log.info("Packet RST")
+        if tcpp and tcpp.URG:
+            log.info("Packet URG")
+        if tcpp and tcpp.FIN:
+            log.info("Packet FIN")
+            
 
 
 
