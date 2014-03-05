@@ -56,8 +56,8 @@ class Fast(object):
         msg.table_id = 1
         msg.match.eth_type = pkt.ethernet.IP_TYPE
         msg.match.ip_proto = ipv4.TCP_PROTOCOL
-        msg.priority = 65000
-        # need to get the state value
+        msg.priority = 65004
+        # Signifying New flow
         msg.actions.append(nx.nx_reg_load(dst=nx.NXM_NX_REG0, value=0x0))
         # currently learning based on eth address
         # no hash
@@ -66,22 +66,12 @@ class Fast(object):
  
         #Table 2 Rules
 
-        #Sync Ack
+        #1. Sync (Should be a Sync)
         msg = nx.nx_flow_mod()
         msg.table_id = 2
         msg.match.eth_type = pkt.ethernet.IP_TYPE
         msg.match.ip_proto = ipv4.TCP_PROTOCOL
-        msg.match.tcp_flags = 0x12
-        msg.priority = 65002
-        msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
-        event.connection.send(msg)
-
-        #Sync
-        msg = nx.nx_flow_mod()
-        msg.table_id = 2
-        msg.match.eth_type = pkt.ethernet.IP_TYPE
-        msg.match.ip_proto = ipv4.TCP_PROTOCOL
-        msg.match.NXM_NX_REG0 = 0x0
+        msg.match.NXM_NX_REG0 = 0
         msg.match.tcp_flags = 2
         msg.priority = 65001
         # learn function for table 1
@@ -93,32 +83,233 @@ class Fast(object):
                              dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
         ]
         fms = nx.flow_mod_spec.new
-        learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 2)))
+        learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 1)))
         learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
         msg.actions.append(learn)
-        # Signifying SYN FLAG was set
-        #msg.actions.append(nx.nx_reg_load(dst=nx.NXM_NX_REG0, value=int(1)))
+        # Hack Start:
+        learn = nx.nx_action_learn(table_id=1,priority=65111)
+        learn.spec = [
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
+                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
+                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
+        ]
+        fms = nx.flow_mod_spec.new
+        learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 1)))
+        learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
+        msg.actions.append(learn)
+        #Hack End:
         msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
         event.connection.send(msg)
-        
-        #Ack
+
+        #2. Sync Ack (Should be after sync)
         msg = nx.nx_flow_mod()
         msg.table_id = 2
         msg.match.eth_type = pkt.ethernet.IP_TYPE
         msg.match.ip_proto = ipv4.TCP_PROTOCOL
-        #msg.match.NXM_NX_REG0 = 0x10
+        msg.match.tcp_flags = 0x12
+        msg.priority = 65002
+        msg.match.NXM_NX_REG0 = 1
+        # learn function for table 1
+        learn = nx.nx_action_learn(table_id=1,priority=65111)
+        learn.spec = [
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
+                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
+                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
+        ]
+        fms = nx.flow_mod_spec.new
+        learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 2)))
+        learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
+        # Hack Start:
+        learn = nx.nx_action_learn(table_id=1,priority=65111)
+        learn.spec = [
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
+                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
+                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
+        ]
+        fms = nx.flow_mod_spec.new
+        learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 2)))
+        learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
+        msg.actions.append(learn)
+        #Hack End:
+        msg.actions.append(learn)
+        msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
+        event.connection.send(msg)
+
+        
+        #3. Ack
+        msg = nx.nx_flow_mod()
+        msg.table_id = 2
+        msg.match.eth_type = pkt.ethernet.IP_TYPE
+        msg.match.ip_proto = ipv4.TCP_PROTOCOL
         msg.match.tcp_flags = 0x010
+        msg.priority = 65003
+        msg.match.NXM_NX_REG0 = 2
+        # learn function for table 1
+        learn = nx.nx_action_learn(table_id=1,priority=65111)
+        learn.spec = [
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
+                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
+                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
+        ]
+        fms = nx.flow_mod_spec.new
+        learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 3)))
+        learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
+        msg.actions.append(learn)
+        # Hack Start:
+        learn = nx.nx_action_learn(table_id=1,priority=65111)
+        learn.spec = [
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
+                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
+                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
+        ]
+        fms = nx.flow_mod_spec.new
+        learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 3)))
+        learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
+        msg.actions.append(learn)
+        #Hack End:
+        msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
+        event.connection.send(msg)
+
+        #4. Fin
+        msg = nx.nx_flow_mod()
+        msg.table_id = 2
+        msg.match.eth_type = pkt.ethernet.IP_TYPE
+        msg.match.ip_proto = ipv4.TCP_PROTOCOL
+        msg.match.tcp_flags = 0x010
+        msg.priority = 65003
+        msg.match.NXM_NX_REG0 = 3
+        # learn function for table 1
+        learn = nx.nx_action_learn(table_id=1,priority=65111)
+        learn.spec = [
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
+                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
+                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
+        ]
+        fms = nx.flow_mod_spec.new
+        learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 4)))
+        learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
+        msg.actions.append(learn)
+        # Hack Start:
+        learn = nx.nx_action_learn(table_id=1,priority=65111)
+        learn.spec = [
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
+                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
+                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
+        ]
+        fms = nx.flow_mod_spec.new
+        learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 4)))
+        learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
+        msg.actions.append(learn)
+        #Hack End:
+        msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
+        event.connection.send(msg)
+
+
+        #5. Fin-Ack
+        msg = nx.nx_flow_mod()
+        msg.table_id = 2
+        msg.match.eth_type = pkt.ethernet.IP_TYPE
+        msg.match.ip_proto = ipv4.TCP_PROTOCOL
+        msg.match.tcp_flags = 0x010
+        msg.priority = 65003
+        msg.match.NXM_NX_REG0 = 4
+        # learn function for table 1
+        learn = nx.nx_action_learn(table_id=1,priority=65111)
+        learn.spec = [
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
+                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
+                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
+        ]
+        fms = nx.flow_mod_spec.new
+        learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 5)))
+        learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
+        msg.actions.append(learn)
+        # Hack Start:
+        learn = nx.nx_action_learn(table_id=1,priority=65111)
+        learn.spec = [
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
+                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
+                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
+        ]
+        fms = nx.flow_mod_spec.new
+        learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 5)))
+        learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
+        msg.actions.append(learn)
+        #Hack End:
+        msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
+        event.connection.send(msg)
+
+        #7. Ack
+        msg = nx.nx_flow_mod()
+        msg.table_id = 2
+        msg.match.eth_type = pkt.ethernet.IP_TYPE
+        msg.match.ip_proto = ipv4.TCP_PROTOCOL
+        msg.match.tcp_flags = 0x010
+        msg.priority = 65003
+        msg.match.NXM_NX_REG0 = 5
+        # learn function for table 1
+        learn = nx.nx_action_learn(table_id=1,priority=65111)
+        learn.spec = [
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
+                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
+                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
+        ]
+        fms = nx.flow_mod_spec.new
+        learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 6)))
+        learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
+        msg.actions.append(learn)
+        # Hack Start:
+        learn = nx.nx_action_learn(table_id=1,priority=65111)
+        learn.spec = [
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
+                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
+                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
+        ]
+        fms = nx.flow_mod_spec.new
+        learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 6)))
+        learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
+        msg.actions.append(learn)
+        #Hack End:
+        msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
+        event.connection.send(msg)
+
+        #8. RST
+        msg = nx.nx_flow_mod()
+        msg.table_id = 2
+        msg.match.eth_type = pkt.ethernet.IP_TYPE
+        msg.match.ip_proto = ipv4.TCP_PROTOCOL
+        msg.match.tcp_flags = 0x14
         msg.priority = 65003
         msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
         event.connection.send(msg)
 
-        #RST
+        #9. PSH-Ack
         msg = nx.nx_flow_mod()
         msg.table_id = 2
         msg.match.eth_type = pkt.ethernet.IP_TYPE
         msg.match.ip_proto = ipv4.TCP_PROTOCOL
-        #msg.match.NXM_NX_REG0 = 0x10
-        msg.match.tcp_flags = 0x14
+        msg.match.tcp_flags = 0x18
+        msg.priority = 65003
+        msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
+        event.connection.send(msg)
+
+        #9. Ack
+        msg = nx.nx_flow_mod()
+        msg.table_id = 2
+        msg.match.eth_type = pkt.ethernet.IP_TYPE
+        msg.match.ip_proto = ipv4.TCP_PROTOCOL
+        msg.match.tcp_flags = 0x10
         msg.priority = 65003
         msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
         event.connection.send(msg)
@@ -126,14 +317,12 @@ class Fast(object):
         #send to controller  currently sending to the destination as no old state stored
         msg = nx.nx_flow_mod()
         msg.table_id = 2
-        #msg.match.NXM_NX_REG7 = 0x10
         msg.priority = 64999
-        #msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
+        msg.actions.append(nx.nx_reg_load(dst=nx.NXM_NX_REG1, value=int(1)))
         msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
         event.connection.send(msg)
         log.info("Table 2 done")
 
-        #msg.actions.append(nx.nx_reg_load(dst=nx.NXM_NX_REG0, value=int(2)))
 
         #Table 3 Rules: Forward the packet to the Destination
         msg = nx.nx_flow_mod()
@@ -163,7 +352,8 @@ class Fast(object):
         #send to controller 
         msg = nx.nx_flow_mod()
         msg.table_id = 3
-        msg.priority = 65000
+        msg.match.NXM_NX_REG1 = 1 
+        msg.priority = 65005
         msg.actions.append(of.ofp_action_output(port = of.OFPP_CONTROLLER))
         event.connection.send(msg)
         log.info("Table 3 done")
