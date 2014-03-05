@@ -1068,10 +1068,10 @@ class nx_action_learn (of.ofp_action_vendor_base):
 
   learn = nx.nx_action_learn(table_id=1,hard_timeout=10)
   learn.spec = [
-      nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_VLAN_TCI),
-                        n_bits=12),
-      nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
-                        dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
+      nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_IP_SRC),
+                        dst=nx.nx_learn_dst_match(nx.NXM_OF_IP_SRC)),
+      nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_IP_DST),
+                        dst=nx.nx_learn_dst_match(nx.NXM_OF_IP_DST)),
       nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_IN_PORT),
                         dst=nx.nx_learn_dst_output())
   ]
@@ -1170,6 +1170,7 @@ NX_LEARN_SRC_IMMEDIATE = 1
 NX_LEARN_DST_MATCH     = 0
 NX_LEARN_DST_LOAD      = 1
 NX_LEARN_DST_OUTPUT    = 2
+NX_LEARN_DST_RESERVED  = 3
 
 class nx_learn_spec (object):
   _is_src = False
@@ -1315,6 +1316,15 @@ class nx_learn_dst_load (nx_learn_spec_dst):
   def __len__ (self):
     return ((self.n_bits+15) // 16) * 2
 
+class nx_learn_dst_reserved (nx_learn_spec_dst):
+  value = NX_LEARN_DST_RESERVED
+
+  def __init__ (self, dummy = True):
+    assert dummy is True
+    super(nx_learn_dst_reserved,self).__init__()
+
+  def __len__ (self):
+    return 0
 
 class nx_learn_dst_output (nx_learn_spec_dst):
   value = NX_LEARN_DST_OUTPUT
@@ -1339,6 +1349,7 @@ def _flow_mod_spec_to_class (is_src, val):
           NX_LEARN_DST_MATCH: nx_learn_dst_match,
           NX_LEARN_DST_LOAD: nx_learn_dst_load,
           NX_LEARN_DST_OUTPUT: nx_learn_dst_output,
+          NX_LEARN_DST_RESERVED: nx_learn_dst_reserved,
         }
 
   return d.get(val)
@@ -2050,8 +2061,8 @@ _make_nxm("NXM_NX_ND_SLL", 1, 24, 6, type=_nxm_ether)
 _make_nxm("NXM_NX_ND_TLL", 1, 25, 6, type=_nxm_ether)
 
 
-_make_nxm("NXM_OF_TCP_FLAGS", 1, 34, 2)
-#_make_nxm_w("NXM_OF_TCP_FLAGS", 1, 34, 2)
+#_make_nxm("NXM_NX_TCP_FLAGS", 1, 34, 2)
+_make_nxm_w("NXM_NX_TCP_FLAGS", 1, 34, 2)
 
 
 # Bits for NXM_NX_IP_FRAG
