@@ -61,15 +61,6 @@ class Fast(object):
         msg.actions.append(nx.nx_reg_load(dst=nx.NXM_NX_REG0, value=0x0))
         # currently learning based on eth address
         # no hash
-        #learn = nx.nx_action_learn(table_id=1)
-        #fms = nx.flow_mod_spec(table_id= 0)
-        #learn.spec.append(fms(load=nx.NXM_NX_REG5, src=nx.nx_learn_src_field(nx.NXM_OF_IP_DST, 0)))
-        #learn.spec.append(fms(load=nx.NXM_NX_REG6, src=nx.nx_learn_src_field(nx.NXM_OF_IP_SRC, 0), n_bits=32)) 
-        #learn.spec.append(fms(field=nx.NXM_OF_IP_DST, match=nx.NXM_NX_REG5))
-        #learn.spec.append(fms(field=nx.NXM_OF_IP_SRC, match=nx.NXM_NX_REG6))
-        #learn.spec.append(fms(field=nx.NXM_NX_REG7, match=nx.NXM_NX_REG7))
-        #learn.spec.append(fms(field=nx.NXM_NX_REG7, output=))
-        #msg.actions.append(learn)
         msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 2))
         event.connection.send(msg)
  
@@ -80,7 +71,6 @@ class Fast(object):
         msg.table_id = 2
         msg.match.eth_type = pkt.ethernet.IP_TYPE
         msg.match.ip_proto = ipv4.TCP_PROTOCOL
-        msg.match.NXM_NX_REG7 = 0x10
         msg.match.tcp_flags = 0x12
         msg.priority = 65002
         msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
@@ -91,7 +81,7 @@ class Fast(object):
         msg.table_id = 2
         msg.match.eth_type = pkt.ethernet.IP_TYPE
         msg.match.ip_proto = ipv4.TCP_PROTOCOL
-        msg.match.NXM_NX_REG7 = 0x0
+        msg.match.NXM_NX_REG0 = 0x0
         msg.match.tcp_flags = 2
         msg.priority = 65001
         # learn function for table 1
@@ -104,6 +94,7 @@ class Fast(object):
         ]
         fms = nx.flow_mod_spec.new
         learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 2)))
+        learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
         msg.actions.append(learn)
         # Signifying SYN FLAG was set
         #msg.actions.append(nx.nx_reg_load(dst=nx.NXM_NX_REG0, value=int(1)))
@@ -115,7 +106,7 @@ class Fast(object):
         msg.table_id = 2
         msg.match.eth_type = pkt.ethernet.IP_TYPE
         msg.match.ip_proto = ipv4.TCP_PROTOCOL
-        msg.match.NXM_NX_REG7 = 0x10
+        #msg.match.NXM_NX_REG0 = 0x10
         msg.match.tcp_flags = 0x010
         msg.priority = 65003
         msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
@@ -126,7 +117,7 @@ class Fast(object):
         msg.table_id = 2
         msg.match.eth_type = pkt.ethernet.IP_TYPE
         msg.match.ip_proto = ipv4.TCP_PROTOCOL
-        msg.match.NXM_NX_REG7 = 0x10
+        #msg.match.NXM_NX_REG0 = 0x10
         msg.match.tcp_flags = 0x14
         msg.priority = 65003
         msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
@@ -135,7 +126,7 @@ class Fast(object):
         #send to controller  currently sending to the destination as no old state stored
         msg = nx.nx_flow_mod()
         msg.table_id = 2
-        msg.match.NXM_NX_REG7 = 0x10
+        #msg.match.NXM_NX_REG7 = 0x10
         msg.priority = 64999
         #msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
         msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
