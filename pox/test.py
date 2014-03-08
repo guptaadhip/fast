@@ -37,6 +37,7 @@ class Fast(object):
         msg.match.eth_type = pkt.ethernet.IP_TYPE
         msg.match.ip_proto = ipv4.TCP_PROTOCOL
         msg.priority = 65000
+        msg.actions.append(nx.nx_multipath(dst = nx.NXM_NX_REG2))
         msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 1))
         event.connection.send(msg)
  
@@ -77,28 +78,13 @@ class Fast(object):
         # learn function for table 1
         learn = nx.nx_action_learn(table_id=1,priority=65111)
         learn.spec = [
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_NX_REG2),
+                             dst=nx.nx_learn_dst_match(nx.NXM_NX_REG2)),
         ]
         fms = nx.flow_mod_spec.new
         learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 1)))
         learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
         msg.actions.append(learn)
-        # Hack Start:
-        learn = nx.nx_action_learn(table_id=1,priority=65111)
-        learn.spec = [
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
-        ]
-        fms = nx.flow_mod_spec.new
-        learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 1)))
-        learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
-        msg.actions.append(learn)
-        #Hack End:
         msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
         event.connection.send(msg)
 
@@ -113,27 +99,12 @@ class Fast(object):
         # learn function for table 1
         learn = nx.nx_action_learn(table_id=1,priority=65111)
         learn.spec = [
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_NX_REG2),
+                             dst=nx.nx_learn_dst_match(nx.NXM_NX_REG2)),
         ]
         fms = nx.flow_mod_spec.new
         learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 2)))
         learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
-        # Hack Start:
-        learn = nx.nx_action_learn(table_id=1,priority=65111)
-        learn.spec = [
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
-        ]
-        fms = nx.flow_mod_spec.new
-        learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 2)))
-        learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
-        msg.actions.append(learn)
-        #Hack End:
         msg.actions.append(learn)
         msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
         event.connection.send(msg)
@@ -150,28 +121,13 @@ class Fast(object):
         # learn function for table 1
         learn = nx.nx_action_learn(table_id=1,priority=65111)
         learn.spec = [
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_NX_REG2),
+                             dst=nx.nx_learn_dst_match(nx.NXM_NX_REG2)),
         ]
         fms = nx.flow_mod_spec.new
         learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 3)))
         learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
         msg.actions.append(learn)
-        # Hack Start:
-        learn = nx.nx_action_learn(table_id=1,priority=65111)
-        learn.spec = [
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
-        ]
-        fms = nx.flow_mod_spec.new
-        learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 3)))
-        learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
-        msg.actions.append(learn)
-        #Hack End:
         msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
         event.connection.send(msg)
 
@@ -186,28 +142,13 @@ class Fast(object):
         # learn function for table 1
         learn = nx.nx_action_learn(table_id=1,priority=65111)
         learn.spec = [
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_NX_REG2),
+                             dst=nx.nx_learn_dst_match(nx.NXM_NX_REG2)),
         ]
         fms = nx.flow_mod_spec.new
         learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 4)))
         learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
         msg.actions.append(learn)
-        # Hack Start:
-        learn = nx.nx_action_learn(table_id=1,priority=65111)
-        learn.spec = [
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
-        ]
-        fms = nx.flow_mod_spec.new
-        learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 4)))
-        learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
-        msg.actions.append(learn)
-        #Hack End:
         msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
         event.connection.send(msg)
 
@@ -223,28 +164,13 @@ class Fast(object):
         # learn function for table 1
         learn = nx.nx_action_learn(table_id=1,priority=65111)
         learn.spec = [
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_NX_REG2),
+                             dst=nx.nx_learn_dst_match(nx.NXM_NX_REG2)),
         ]
         fms = nx.flow_mod_spec.new
         learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 5)))
         learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
         msg.actions.append(learn)
-        # Hack Start:
-        learn = nx.nx_action_learn(table_id=1,priority=65111)
-        learn.spec = [
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
-        ]
-        fms = nx.flow_mod_spec.new
-        learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 5)))
-        learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
-        msg.actions.append(learn)
-        #Hack End:
         msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
         event.connection.send(msg)
 
@@ -259,28 +185,13 @@ class Fast(object):
         # learn function for table 1
         learn = nx.nx_action_learn(table_id=1,priority=65111)
         learn.spec = [
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
+            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_NX_REG2),
+                             dst=nx.nx_learn_dst_match(nx.NXM_NX_REG2)),
         ]
         fms = nx.flow_mod_spec.new
         learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 6)))
         learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
         msg.actions.append(learn)
-        # Hack Start:
-        learn = nx.nx_action_learn(table_id=1,priority=65111)
-        learn.spec = [
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_DST),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_SRC)),
-            nx.flow_mod_spec(src=nx.nx_learn_src_field(nx.NXM_OF_ETH_SRC),
-                             dst=nx.nx_learn_dst_match(nx.NXM_OF_ETH_DST)),
-        ]
-        fms = nx.flow_mod_spec.new
-        learn.spec.append(fms(load=nx.NXM_NX_REG0, src=nx.nx_learn_src_immediate.u32(None, 6)))
-        learn.spec.append(fms(field=nx.NXM_NX_REG0, reserved=True ))
-        msg.actions.append(learn)
-        #Hack End:
         msg.actions.append(nx.nx_action_resubmit.resubmit_table(table = 3))
         event.connection.send(msg)
 
@@ -411,4 +322,3 @@ class Fast(object):
 
 def launch ():
     core.registerNew(Fast)
-
