@@ -25,7 +25,7 @@ import pox.openflow.libopenflow_01 as of
 from pox.openflow.libopenflow_01 import ofp_header, ofp_vendor_base
 from pox.openflow.libopenflow_01 import _PAD, _PAD2, _PAD4, _PAD6
 from pox.openflow.libopenflow_01 import _unpack, _read, _skip
-
+from struct import calcsize
 import struct
 
 
@@ -97,6 +97,19 @@ NXT_FLOW_MONITOR_CANCEL = 21
 NXT_FLOW_MONITOR_PAUSED = 22
 NXT_FLOW_MONITOR_RESUMED = 23
 
+NX_ACTION_MULTIPATH_PACK_STR = '!HHH2xHH2xH2xH4s'
+
+# enum nx_hash_fields
+NX_HASH_FIELDS_ETH_SRC = 0
+NX_HASH_FIELDS_SYMMETRIC_L4 = 1
+
+# enum nx_mp_algorithm
+NX_MP_ALG_MODULO_N = 0
+NX_MP_ALG_HASH_THRESHOLD = 1
+NX_MP_ALG_HRW = 2
+NX_MP_ALG_ITER_HASH = 3
+
+
 NXST_FLOW_MONITOR_REQUEST = 2
 NXST_FLOW_MONITOR_REPLY = 2
 
@@ -107,7 +120,6 @@ def _issubclass (a, b):
     return issubclass(a, b)
   except TypeError:
     return False
-
 
 class nicira_base (ofp_vendor_base):
   """
@@ -203,6 +215,45 @@ class nicira_base (ofp_vendor_base):
     outstr += prefix + 'subtype: ' + str(self.subtype) + '\n'
     outstr += self._show(prefix)
     return outstr
+
+class nx_multipath (of.ofp_action_vendor_base):
+
+  def _init (self, kw):
+    self.type = of.OFPAT_VENDOR
+    self.len = 32
+    self.vendor = NX_VENDOR_ID
+    self.subtype = NXAST_MULTIPATH
+    self.fields = NX_HASH_FIELDS_SYMMETRIC_L4
+    self.basis = 3
+    self.algorithm = NX_MP_ALG_HRW
+    self.max_link = 31
+    self.arg = 0x31
+    self.ofs_nbits = 0x1F
+    self.dst = None
+
+  def _eq (self, other):
+    if self.subtype != other.subtype: return False
+    return True
+
+  def _pack_body (self):
+    o = self.dst()
+    o._force_mask = False
+    dst = o.pack(omittable=False, header_only=True)
+
+    p = struct.pack(NX_ACTION_MULTIPATH_PACK_STR, self.subtype, self.fields, self.basis, self.algorithm, self.max_link, self.arg, self.ofs_nbits, dst)
+    return p
+
+  def _unpack_body (self, raw, offset, avail):
+    offset,(self.subtype, self.fields, self.basis, self.algorithm, self.max_link, self.arg, self.ofs_nbits, self.dst) = of._unpack('!HHHHHHHI', raw, offset)
+    return offset
+
+  def _body_length (self):
+    return 24
+
+  def _show (self, prefix):
+    s = ''
+    s += prefix + ('subtype: %s\n' % (self.subtype,))
+    return s
 
 
 class nx_flow_mod_table_id (nicira_base):
